@@ -1,0 +1,11 @@
+--- odbc_update_ini.sh	2015-09-07 16:37:18.000000000 -0700
++++ /opt/ora12/instantclient_12_2/odbc_update_ini.sh	2018-02-20 10:47:48.000000000 -0800
+@@ -98,7 +98,7 @@
+ fi
+ 
+ # We know driver .so name 
+-SO_NAME=libsqora.so.12.1
++SO_NAME=libsqora.dylib.12.1
+ 
+ echo "
+ [$DRIVER_NAME]

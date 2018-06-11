@@ -1,0 +1,252 @@
+---
+title: "Database Connections"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+  html_notebook:
+    toc: yes
+---
+
+```{r setup}
+library(DBI)
+library(tidyverse)
+library(dbplyr)
+```
+
+# Establish a Connection
+
+The following sections show how to create connection to various flavors of 
+databases.
+
+## SQLite
+```{r sqlite_connect}
+con <- dbConnect(RSQLite::SQLite(),  ":memory:")
+```
+
+## Postgres
+```{bash launch_postgres, eval=FALSE}
+docker run --rm --name rstats-postgres -e POSTGRES_PASSWORD=mysecretpassword -d -p 5432:5432 postgres 
+```
+
+Connect to PostgreSQL via DBI or ODBC.
+
+```{r connect_postgres}
+con <- dbConnect(RPostgres::Postgres(),
+        host      = "127.0.0.1",
+        password  = 'mysecretpassword', 
+        user      = 'postgres') 
+
+con <- dbConnect(odbc::odbc(), 
+                 Driver   = "PostgreSQL",
+                 Database = "postgres",
+                 PWD      = 'mysecretpassword', 
+                 UID      = 'postgres', 
+                 Server   = "127.0.0.1", 
+                 port     = 5432)
+```
+
+
+## MariaDB/MySQL
+
+Launch either a MariaDB or MySQL docker container.
+
+```{bash, eval=FALSE}
+docker run --rm --name rstats-mariadb -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p 3306:3306 mariadb
+docker run --rm --name rstats-mysqldb -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p 3307:3306 mysql
+```
+
+Connect to MySQL
+
+```{r mysql}
+con <- dbConnect(RMariaDB::MariaDB(),
+          dbname    = "mysql",
+          host      = "127.0.0.1", 
+          port      = 3307,
+          user      = 'root', 
+          password  = 'mysecretpassword') 
+
+con <- dbConnect(odbc::odbc(), 
+          Driver   = 'MariaSQL',
+          Server   = "127.0.0.1", 
+          Port     = 3307,
+          Database = 'mysql',
+          Uid      = 'root', 
+          Pwd      = 'mysecretpassword')
+```
+
+Connect to MariaDB
+
+```{r maria}
+con <- dbConnect(RMariaDB::MariaDB(),
+          dbname    = "mysql",
+          host      = "127.0.0.1", 
+          port      = 3306,
+          user      = 'root', 
+          password  = 'mysecretpassword') 
+
+con <- dbConnect(odbc::odbc(), 
+          Driver   = 'MariaSQL',
+          Server   = "127.0.0.1", 
+          Port     = 3306,
+          Database = 'mysql',
+          Uid      = 'root', 
+          Pwd      = 'mysecretpassword')
+```
+
+## MS SQL Server
+
+```{bash launch_mssql, eval=FALSE}
+docker run --rm --name rstats-mssql -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=myS3cretPassword' -p 1433:1433 -d microsoft/mssql-server-linux
+```
+
+```{r connect_mssql}
+con <- dbConnect(odbc::odbc(), 
+          Driver   = 'SQL Server',
+          Server   = "127.0.0.1", 
+          Port     = 1433,
+          Database = 'master',
+          Uid      = 'sa', 
+          Pwd      = 'myS3cretPassword')
+```
+
+## Oracle
+
+Per https://serverfault.com/a/51304
+
+* SID: identifies the database instance (database name + instance number). So 
+if your database name is somedb and your instance number is 3, then your SID 
+is somedb3.
+
+* Instance name: same as SID
+
+* DB Name: Name of the database (database can be shared b/t multiple instances)
+
+* DB Domain:  Usually the same as your company domain (somecompany.com)
+
+* Global (Database) Name: Database name + database domain (somedb.somecompany.com)
+
+* Service Name: A "connector" to one or more instances. It is often useful to 
+create additional service names in a RAC environment since the service can be 
+modified to use particular SIDs as primary or secondary connections, or to not 
+use certain SIDs at all.
+
+* Service Alias: An alias to the service name (just like a CNAME, etc). Say 
+you make your service name something meaningful to the dba, but perhaps it's a 
+bit esoteric. Create a service alias and name it something that will be 
+meaningful to the user.
+
+Set tnsnames.ora to the following:
+```
+DB1 =
+ ( DESCRIPTION =
+   (ADDRESS_LIST =
+     (ADDRESS =
+       (PROTOCOL = TCP)
+       (Host = myoracledb.myorg.tld)
+       (Port = 15033)
+     )
+   )
+   (CONNECT_DATA =
+    (SID = Special)
+   )
+ )
+```
+ 
+Ensure that TNS_ADMIN is pointed to the directory where you have tnsnames.ora 
+located. For me, that is `/Users/davidski`. This can be set in the .Renviron in 
+the project directory.
+
+Set odbc.ini to
+
+```
+[db1]
+Description = DB1 Oracle Database
+Driver = Oracle 12c
+Servername = DB1
+```
+
+```{r oracle}
+#con <- dbConnect(odbc::odbc(), dsn = "db1")
+con <- dbConnect(odbc::odbc(), dsn = "db1", 
+                 Uid = rstudioapi::askForPassword("DB1 Username"),
+                 Pwd = rstudioapi::askForPassword("DB1 password"))
+```
+
+# Using Database Connections
+
+With a valid connection to a database (`con` variable in this example), we 
+can now work with our database in a variety of SQL and R-friendly ways.
+
+## Testing DBI interface
+
+
+```{r}
+dbListTables(con)
+dbWriteTable(con, "mtcars", mtcars)
+dbListTables(con)
+
+dbListFields(con, "mtcars")
+dbReadTable(con, "mtcars")
+
+# You can fetch all results:
+res <- dbSendQuery(con, "SELECT * FROM mtcars WHERE cyl = 4")
+dbFetch(res)
+dbClearResult(res)
+
+# Or a chunk at a time
+res <- dbSendQuery(con, "SELECT * FROM mtcars WHERE cyl = 4")
+while(!dbHasCompleted(res)){
+  chunk <- dbFetch(res, n = 5)
+  print(nrow(chunk))
+  print(chunk)
+}
+# Clear the result
+dbClearResult(res)
+
+# Disconnect from the database
+dbDisconnect(con)
+```
+
+## Testing dbplyr interface
+
+Load data into the DB
+```{r create_flights}
+copy_to(con, nycflights13::flights, "flights", 
+        overwrite = TRUE,
+        temporary = FALSE,
+        indexes = list(
+          c("year", "month", "day"),
+          "carrier",
+          "tailnum",
+          "dest")
+)
+
+flights_db <- tbl(con, "flights")
+flights_db
+```
+
+Perform a simple count
+
+```{r}
+flights_db %>% tally()
+```
+
+Perform a more complex dplyr pipe
+
+```{r}
+tailnum_delay_db <- flights_db %>% 
+  group_by(tailnum) %>%
+  summarise(
+    delay = mean(arr_delay, na.rm = TRUE),
+    n = n()
+  ) %>% 
+  arrange(desc(delay)) %>%
+  filter(n > 100)
+
+tailnum_delay_db %>% collect()
+```
+
+```{sql raw_sql, connection=con, eval = FALSE}
+SELECT * from flights WHERE MONTH = 1
+```
