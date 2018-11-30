@@ -6,16 +6,16 @@ Database Connections
 > Patterned after <http://db.rstudio.com/>
 
 This walkthrough is for MacOS X users. Windows users may be able to
-achieve similar results through the use of Chocolatey, though research
-into the specific packages under Windows that match what homebrew
-installs is required.
+achieve similar results through the use of
+[Chocolatey](https://chocolatey.org/), though research into the specific
+packages under Windows that match what homebrew installs is required.
 
 These connectivity examples use DBI-compatible interfaces. DBI is a
 database interface specification that allows any compliant tool to
 communicate with databases without knowledge of the underlying database
 technology. Using DBI tooling allows both direct SQL queries through raw
 connections as well as tight integration with the tidyverse through the
-spiffy dbplyr package.
+spiffy `dbplyr` package.
 
 Database drivers must be written with DBI interfaces. Both native
 drivers and the generic (DBI-compliant) odbc connections are
@@ -34,8 +34,8 @@ connections tab of the RStudio IDE.
 # install base odbc framework
 brew install unixodbc
 
-# Microsoft SQL Server, mkaing it available for odbc and with Kerberos support
-brew install freetds --with-unixodbc --with-krb5
+# Microsoft SQL Server, enabling it for use with odbc
+brew install freetds --with-unixodbc
   
 # PostgreSQL ODBC Drivers
 brew install psqlodbc
@@ -55,7 +55,7 @@ The Oracle client install is complicated. 😦
 Download the Basic client and the ODBC drivers via  
 <http://www.oracle.com/technetwork/topics/intel-macsoft-096467.html>. A
 (free) Oracle account is required. Place both ZIP files in your
-~/Downloads
+\~/Downloads
 directory.
 
 ``` bash

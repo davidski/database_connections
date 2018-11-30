@@ -96,9 +96,13 @@ con <- dbConnect(odbc::odbc(),
 
 ## MS SQL Server
 
+Launch a MS SQL Server in a Linux Docker container.
+
 ```{bash launch_mssql, eval=FALSE}
 docker run --rm --name rstats-mssql -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=myS3cretPassword' -p 1433:1433 -d microsoft/mssql-server-linux
 ```
+
+To connect with a standard SQL Server local account and password.
 
 ```{r connect_mssql}
 con <- dbConnect(odbc::odbc(), 
@@ -108,6 +112,29 @@ con <- dbConnect(odbc::odbc(),
           Database = 'master',
           Uid      = 'sa', 
           Pwd      = 'myS3cretPassword')
+```
+
+To connect to MS-SQL using Active Directory credentials requires using 
+Kerberos. Setting up Kerberos is outside the scope of this document, but if 
+you are in an enterprise environment, you may be already pre-configured 
+with something like Enterprise Connect.
+
+Once Kerberos is established, if you need to use an account that is not the 
+same as your login user (e.g. a service account), you need to go to a 
+terminal window and run `kinit <your_service_account_id>`, then supply the 
+password. This gets a ticket granting ticket (TGT) which will allow the 
+subsequent connections to "just work". There is a limited lifespan for this 
+TGT and you may need to go back to the terminal to repeat this procedure 
+between sessions. Running `klist` will verify what (if any) TGTs you currently 
+have. Note that the default Kerberos credentials will be used in the following 
+connection, which is why no `Uid` or `Pwd` are passed.
+
+```{r connect_mssql_ad}
+con <- dbConnect(odbc::odbc(), 
+          Driver   = 'SQL Server',
+          Server   = "sqlserver.myorg.tld", 
+          Port     = 1433,
+          Database = 'master')
 ```
 
 ## Oracle
@@ -196,7 +223,7 @@ dbClearResult(res)
 
 # Or a chunk at a time
 res <- dbSendQuery(con, "SELECT * FROM mtcars WHERE cyl = 4")
-while(!dbHasCompleted(res)){
+while (!dbHasCompleted(res)) {
   chunk <- dbFetch(res, n = 5)
   print(nrow(chunk))
   print(chunk)
