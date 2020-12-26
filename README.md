@@ -74,7 +74,7 @@ ln -s `pwd`/libclntshcore.dylib.12.1 /usr/local/lib
 ### Configure ODBC Drivers
 
 Set `/usr/local/etc/odbcinst.ini` to the following to allow easy
-refernce to the database drivers by name rather than by full file path:
+reference to the database drivers by name rather than by full file path:
 
     [SQLite]
     Driver = /usr/local/lib/libsqlite3odbc.dylib
